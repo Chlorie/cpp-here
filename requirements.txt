@@ -1,0 +1,2 @@
+PyInquirer >= 1.0.0
+stringcase >= 1.0.0
