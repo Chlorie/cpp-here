@@ -95,6 +95,7 @@ class Initializer:
         (self._cd / "cmake").mkdir()
         self._copy_res(".editorconfig")
         self._copy_res(".gitignore")
+        self._copy_res(".clang-format")
         self._copy_res("CMakePresets.json")
         self._copy_res("cmake/ProjectSettings.cmake")
 

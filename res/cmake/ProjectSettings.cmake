@@ -25,6 +25,11 @@ function (target_set_warnings TGT ACCESS)
         /w14547 /w14549 /w14555 /w14619 /w14640
         /w14826 /w14905 /w14906 /w14928)
 
+    set(MSVC_SUPPRESS_EXTERNAL_WARNINGS
+        # Ignore warnings from external includes
+        /experimental:external
+        /external:W0 /external:anglebrackets /external:templates-)
+
     set(CLANG_WARNINGS
         -Wall -Wextra -Wpedantic
         -Wshadow -Wnon-virtual-dtor -Wold-style-cast -Wcast-align
@@ -32,19 +37,23 @@ function (target_set_warnings TGT ACCESS)
         -Wnull-dereference -Wdouble-promotion -Wformat=2)
 
     if (WARNINGS_AS_ERRORS)
-        set(MSVC_WARNINGS ${MSVC_WARNINGS} /WX)
+        set(MSVC_WARINGS ${MSVC_WARNINGS} /WX)
         set(CLANG_WARNINGS ${CLANG_WARNINGS} -Werror)
     endif ()
 
     set(GCC_WARNINGS
         ${CLANG_WARNINGS}
-        -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches    
-        -Wlogical-op -Wuseless-cast)
+        -Wmisleading-indentation -Wduplicated-cond
+        -Wduplicated-branches -Wlogical-op)
         
-    if (MSVC) # Visual Studio
-        target_compile_options(${TGT} ${ACCESS} ${MSVC_WARNINGS}
-            /external:W0 /external:anglebrackets /external:templates-)
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") # clang
+    if (MSVC) # MSVC-like
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # clang-cl
+            target_compile_options(${TGT} ${ACCESS} ${MSVC_WARNINGS})
+        else () # Real MSVC
+            string(REGEX REPLACE " /W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}") # Remove default /W3
+            target_compile_options(${TGT} ${ACCESS} ${MSVC_WARNINGS} ${MSVC_SUPPRESS_EXTERNAL_WARNINGS})
+        endif ()
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # clang
         target_compile_options(${TGT} ${ACCESS} ${CLANG_WARNINGS})
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU") # gcc
         target_compile_options(${TGT} ${ACCESS} ${GCC_WARNINGS})
@@ -76,15 +85,24 @@ function (target_set_options TGT ACCESS)
             target_compile_definitions(${TGT} PUBLIC _WIN32_WINNT=${WIN32_WINNT})
         endif ()
     endif ()
-        
+
     if (MSVC) # Visual Studio
-        target_compile_options(${TGT} ${ACCESS} # Conformance settings
-            /utf-8 /permissive- /Zc:__cplusplus /Zc:externConstexpr)
-    # Colored diagnostics for clang and gcc
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-        target_compile_options(${TGT} ${ACCESS} -fcolor-diagnostics)
+        if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            target_compile_options(${TGT} ${ACCESS} # Conformance settings
+                /utf-8 /permissive- /Zc:__cplusplus /Zc:externConstexpr)
+        endif ()
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${TGT} ${ACCESS}
+            -stdlib=libc++
+            -fcolor-diagnostics
+            -ftemplate-backtrace-limit=32)
+        target_link_options(${TGT} ${ACCESS} -stdlib=libc++)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(${TGT} ${ACCESS} -fdiagnostics-color=always)
+        target_compile_options(${TGT}
+            ${ACCESS}
+            -fdiagnostics-color=always
+            -fconcepts-diagnostics-depth=16
+            -ftemplate-backtrace-limit=32)
     endif ()
 endfunction ()
 
@@ -95,7 +113,7 @@ function (target_set_output_dirs TGT)
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out")
 endfunction ()
 
-function (target_set_cxx20 TGT)
+function (target_set_cxx_std TGT)
     # Set C++20
     if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129)
         # We actually need /std:c++latest (C++23) for some of the C++20 features

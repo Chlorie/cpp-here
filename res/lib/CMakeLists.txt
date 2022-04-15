@@ -28,7 +28,7 @@ add_sources(SOURCES
 target_sources(%project_name% PRIVATE ${HEADERS} ${SOURCES})
 target_set_options(%project_name% PRIVATE)
 target_set_warnings(%project_name% PRIVATE)
-target_set_cxx20(%project_name%)
+target_set_cxx_std(%project_name%)
 
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(%project_name%
