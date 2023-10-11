@@ -84,6 +84,7 @@ class Initializer:
     def _project_settings(self):
         self._name = prompt.input("Project name", self._name)
         self._vars["%project_name%"] = self._name
+        self._vars["%upper_project_name%"] = sc.constcase(self._name)
         self._vars["%version%"] = prompt.input("Package", "0.1.0")
         self._project_type = ProjectType(prompt.choices(
             "What type of project?",
@@ -96,24 +97,37 @@ class Initializer:
         self._copy_res(".editorconfig")
         self._copy_res(".gitignore")
         self._copy_res(".clang-format")
-        self._copy_res("CMakePresets.json")
+        self._copy_res("CMakePresets.json", config_vars=True)
         self._copy_res("cmake/ProjectSettings.cmake")
 
     def _setup_vcpkg(self):
         vcpkg = prompt.choices(
             "Set up vcpkg settings?",
-            "Yes", "Yes, and also add vcpkg_configuration.json", "No")
+            "Yes", "Yes, and also add vcpkg-configuration.json", "No")
+
+        if vcpkg == 1:
+            (self._cd / "vcpkg-configuration.json").write_text(json.dumps({
+                "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
+                "registries": [],
+                "default-registry": {
+                    "kind": "git",
+                    "repository": "https://github.com/microsoft/vcpkg",
+                    "baseline": "9c7c66471005cb132832786d5d65d83d2cf503ad"
+                }
+            }, indent=4))
         if vcpkg != 2:
-            vcpkg_name = prompt.input("vcpkg package name", sc.spinalcase(self._name))
+            vcpkg_name = prompt.input(
+                "vcpkg package name", sc.spinalcase(self._name))
             (self._cd / "vcpkg.json").write_text(json.dumps({
+                "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
                 "name": vcpkg_name,
                 "version-string": self._vars["%version%"],
                 "dependencies": []
             }, indent=4))
-        if vcpkg == 1:
-            (self._cd / "vcpkg_configuration.json").write_text(json.dumps({
-                "registries": []
-            }, indent=4))
+            vcpkg_args = ["x-update-baseline"]
+            if vcpkg == 0:
+                vcpkg_args.append("--add-initial-baseline")
+            self._system("vcpkg", *vcpkg_args)
 
     def _initialize_app(self):
         self._copy_res("CMakeLists.txt", config_vars=True)
@@ -123,24 +137,30 @@ class Initializer:
         self._success("Created CMake project for the app")
 
     def _initialize_lib(self):
-        self._copy_res("CMakeListsLibrary.txt", "CMakeLists.txt", config_vars=True)
+        self._copy_res("CMakeListsLibrary.txt",
+                       "CMakeLists.txt", config_vars=True)
         (self._cd / "examples").mkdir()
         self._copy_res("examples/CMakeLists.txt", config_vars=True)
         self._copy_res("examples/playground.cpp")
         self._success("Created CMake directory for examples")
-        include_dir = prompt.input("Include directory name", sc.snakecase(self._name))
+        include_dir = prompt.input(
+            "Include directory name", sc.snakecase(self._name))
         self._vars["%include_dir%"] = include_dir
         include_dir = "lib/include/" + include_dir
         (self._cd / include_dir).mkdir(parents=True)
         if self._project_type == ProjectType.HEADERS:
-            self._copy_res("lib/CMakeListsHeaderOnly.txt", "lib/CMakeLists.txt", config_vars=True)
+            self._copy_res("lib/CMakeListsHeaderOnly.txt",
+                           "lib/CMakeLists.txt", config_vars=True)
         else:
             self._vars["%macro_namespace%"] = prompt.input(
                 "Preprocessor macro namespace", sc.constcase(self._name))
-            self._copy_res("lib/include/dir/export.h", include_dir + "/export.h", config_vars=True)
+            self._copy_res("lib/include/dir/export.h",
+                           include_dir + "/export.h", config_vars=True)
             self._copy_res("lib/CMakeLists.txt", config_vars=True)
             (self._cd / "lib/src").mkdir(parents=True)
-        self._copy_res("cmake/libConfig.cmake.in", f"cmake/{self._name}Config.cmake.in", config_vars=True)
+            self._copy_res("lib/src/dummy.cpp")
+        self._copy_res("cmake/libConfig.cmake.in",
+                       f"cmake/{self._name}Config.cmake.in", config_vars=True)
         self._success("Created CMake project for the library")
 
     def _add_docs(self):
@@ -148,24 +168,29 @@ class Initializer:
             return
         self._copy_res("cmake/FindSphinx.cmake")
         with (self._cd / "CMakeLists.txt").open("a") as file:
+            prefix = f'{self._vars["%upper_project_name%"]}_'
             file.write(
                 '\n'
-                'option(BUILD_DOCS "Build documentation using Doxygen & Sphinx" OFF)\n'
-                'if (BUILD_DOCS)\n'
+                f'option({prefix}BUILD_DOCS "Build documentation using Doxygen & Sphinx" OFF)\n'
+                f'if ({prefix}BUILD_DOCS)\n'
                 '    add_subdirectory(docs)\n'
                 'endif ()\n')
         (self._cd / "docs/custom").mkdir(parents=True)
         self._copy_res("docs/custom/custom.css")
-        self._vars["%project_title%"] = prompt.input("Project title", sc.titlecase(self._name))
+        self._vars["%project_title%"] = prompt.input(
+            "Project title", sc.titlecase(self._name))
         author = prompt.input("Author of the library/documentation")
         self._vars["%author%"] = author
         doc_copyright_def = f"{datetime.datetime.now().year}, {author}"
-        self._vars["%doc_copyright%"] = prompt.input("Docs copyright", doc_copyright_def)
-        self._vars["%cpp_namespace%"] = prompt.input("C++ namespace of the project", sc.snakecase(self._name))
+        self._vars["%doc_copyright%"] = prompt.input(
+            "Docs copyright", doc_copyright_def)
+        self._vars["%cpp_namespace%"] = prompt.input(
+            "C++ namespace of the project", sc.snakecase(self._name))
         self._copy_res("docs/CMakeLists.txt", config_vars=True)
         self._copy_res("docs/conf.py", config_vars=True)
         self._copy_res("docs/Doxyfile.in", config_vars=True)
         self._copy_res("docs/index.rst", config_vars=True)
+        self._copy_res("docs/requirements.txt")
 
     def _add_readme(self):
         if not prompt.confirm("Add a readme file?"):

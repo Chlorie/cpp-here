@@ -6,3 +6,4 @@ build/
 /Folder.DotSettings.user
 docs/output/
 vcpkg_installed/
+CMakeUserPresets.json

@@ -1,5 +1,5 @@
-from typing import Optional
-import PyInquirer as inq
+from typing import Optional, cast
+import InquirerPy as inq
 
 
 def input(message: str, default: Optional[str] = None) -> str:
@@ -10,7 +10,7 @@ def input(message: str, default: Optional[str] = None) -> str:
     }
     if default is not None:
         prompt["default"] = default
-    return inq.prompt([prompt])["name"]
+    return cast(str, inq.prompt([prompt])["name"])
 
 
 def choices(message: str, *choices: str) -> int:
@@ -23,13 +23,13 @@ def choices(message: str, *choices: str) -> int:
             for i, choice in enumerate(choices)
         ]
     }
-    return inq.prompt([prompt])["name"]
+    return cast(int, inq.prompt([prompt])["name"])
 
 
 def confirm(message: str, default: bool = False) -> bool:
-    return inq.prompt([{
+    return cast(bool, inq.prompt([{
         "type": "confirm",
         "name": "name",
         "message": message,
         "default": default
-    }])["name"]
+    }])["name"])
