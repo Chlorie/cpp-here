@@ -1,6 +1,7 @@
-add_library(%project_name%)
+add_library(%project_name%%if:is_header_only% INTERFACE%endif%)
 add_library(%project_name%::%project_name% ALIAS %project_name%)
 
+%if:is_linked%
 set_target_properties(%project_name% PROPERTIES LINKER_LANGUAGE CXX)
 target_set_output_dirs(%project_name%)
 
@@ -41,6 +42,14 @@ target_link_libraries(%project_name%
 PUBLIC
     # fmt::fmt
 )
+%endif%
+%if:is_header_only%
+target_include_directories(%project_name%
+INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+%endif%
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

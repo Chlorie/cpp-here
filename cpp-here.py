@@ -7,6 +7,7 @@ import datetime
 import shutil as sh
 from pathlib import Path
 import prompt
+from config_template import ConfigVars, config_template
 import json
 
 
@@ -27,18 +28,21 @@ class Initializer:
         self._res_dir = Path(os.path.realpath(__file__)).parent / "res"
         self._name = sc.spinalcase(self._cd.stem)
         self._app_type = ProjectType.APP
-        self._vars: Dict[str, str] = {}
+        self._vars: ConfigVars = {}
+        self._enable_tests: bool = False
 
     def run(self):
         self._check_cd()
         self._project_settings()
         self._universal_res()
-        self._setup_vcpkg()
         if self._project_type == ProjectType.APP:
             self._initialize_app()
         else:
             self._initialize_lib()
             self._add_docs()
+        if self._enable_tests:
+            self._initialize_tests()
+        self._setup_vcpkg()
         self._add_readme()
         self._git()
         self._success("Finished project initialization")
@@ -59,10 +63,12 @@ class Initializer:
             message += f", {hint}"
         self._error(message)
 
-    def _copy_res(self,
-                  res_path: str,
-                  tgt_path: Optional[str] = None,
-                  config_vars: bool = False):
+    def _copy_res(
+        self,
+        res_path: str,
+        tgt_path: Optional[str] = None,
+        config_vars: bool = False
+    ):
         if tgt_path is None:
             tgt_path = res_path
         tgt = self._cd / tgt_path
@@ -71,9 +77,7 @@ class Initializer:
             sh.copytree(res, tgt)
         elif config_vars:
             text = res.read_text()
-            for var, val in self._vars.items():
-                text = text.replace(var, val)
-            tgt.write_text(text)
+            tgt.write_text(config_template(text, self._vars))
         else:
             sh.copy(res, tgt)
 
@@ -83,14 +87,25 @@ class Initializer:
 
     def _project_settings(self):
         self._name = prompt.input("Project name", self._name)
-        self._vars["%project_name%"] = self._name
-        self._vars["%upper_project_name%"] = sc.constcase(self._name)
-        self._vars["%version%"] = prompt.input("Package", "0.1.0")
+        self._vars["project_name"] = self._name
+        self._vars["upper_project_name"] = sc.constcase(self._name)
+        self._vars["version"] = prompt.input("Package", "0.1.0")
         self._project_type = ProjectType(prompt.choices(
             "What type of project?",
             "Application",
             "Header-only library",
             "Static/Shared library"))
+        self._enable_tests = prompt.confirm("Enable testing with Catch2?")
+        self._vars["test_enabled"] = self._enable_tests
+        if self._project_type == ProjectType.APP:
+            self._vars["is_app"] = True
+        else:
+            self._vars["is_lib"] = True
+            if self._project_type == ProjectType.HEADERS:
+                self._vars["is_header_only"] = True
+            else:
+                self._vars["is_linked"] = True
+        self._copy_res("CMakeLists.txt", config_vars=True)
 
     def _universal_res(self):
         (self._cd / "cmake").mkdir()
@@ -98,6 +113,7 @@ class Initializer:
         self._copy_res(".gitignore")
         self._copy_res(".clang-format")
         self._copy_res("CMakePresets.json", config_vars=True)
+        self._copy_res("CMakeUserPresets_.json", "CMakeUserPresets.json", config_vars=True)
         self._copy_res("cmake/ProjectSettings.cmake")
 
     def _setup_vcpkg(self):
@@ -118,57 +134,62 @@ class Initializer:
         if vcpkg != 2:
             vcpkg_name = prompt.input(
                 "vcpkg package name", sc.spinalcase(self._name))
-            (self._cd / "vcpkg.json").write_text(json.dumps({
+            vcpkg_json = {
                 "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
                 "name": vcpkg_name,
-                "version-string": self._vars["%version%"],
+                "version-string": self._vars["version"],
                 "dependencies": []
-            }, indent=4))
+            }
+            if self._enable_tests:
+                vcpkg_json["features"] = {
+                    "build-tests": {
+                        "description": "Build unit tests",
+                        "dependencies": ["catch2"]
+                    }
+                }
+            (self._cd / "vcpkg.json").write_text(json.dumps(vcpkg_json, indent=4))
             vcpkg_args = ["x-update-baseline"]
             if vcpkg == 0:
                 vcpkg_args.append("--add-initial-baseline")
             self._system("vcpkg", *vcpkg_args)
 
     def _initialize_app(self):
-        self._copy_res("CMakeLists.txt", config_vars=True)
         (self._cd / "src").mkdir()
         self._copy_res("src/CMakeLists.txt", config_vars=True)
         self._copy_res("src/main.cpp")
         self._success("Created CMake project for the app")
 
     def _initialize_lib(self):
-        self._copy_res("CMakeListsLibrary.txt",
-                       "CMakeLists.txt", config_vars=True)
         (self._cd / "examples").mkdir()
         self._copy_res("examples/CMakeLists.txt", config_vars=True)
         self._copy_res("examples/playground.cpp")
         self._success("Created CMake directory for examples")
-        include_dir = prompt.input(
-            "Include directory name", sc.snakecase(self._name))
-        self._vars["%include_dir%"] = include_dir
+        include_dir = prompt.input("Include directory name", sc.snakecase(self._name))
+        self._vars["include_dir"] = include_dir
         include_dir = "lib/include/" + include_dir
         (self._cd / include_dir).mkdir(parents=True)
-        if self._project_type == ProjectType.HEADERS:
-            self._copy_res("lib/CMakeListsHeaderOnly.txt",
-                           "lib/CMakeLists.txt", config_vars=True)
-        else:
-            self._vars["%macro_namespace%"] = prompt.input(
-                "Preprocessor macro namespace", sc.constcase(self._name))
+        if self._project_type == ProjectType.LIBRARY:
+            self._vars["macro_namespace"] = prompt.input("Preprocessor macro namespace", sc.constcase(self._name))
             self._copy_res("lib/include/dir/export.h",
                            include_dir + "/export.h", config_vars=True)
-            self._copy_res("lib/CMakeLists.txt", config_vars=True)
             (self._cd / "lib/src").mkdir(parents=True)
             self._copy_res("lib/src/dummy.cpp")
+        self._copy_res("lib/CMakeLists.txt", config_vars=True)
         self._copy_res("cmake/libConfig.cmake.in",
                        f"cmake/{self._name}Config.cmake.in", config_vars=True)
         self._success("Created CMake project for the library")
+
+    def _initialize_tests(self):
+        (self._cd / "tests").mkdir()
+        self._copy_res("tests/CMakeLists.txt", config_vars=True)
+        self._copy_res("tests/example.cpp")
 
     def _add_docs(self):
         if not prompt.confirm("Add Doxygen & Sphinx based docs support?"):
             return
         self._copy_res("cmake/FindSphinx.cmake")
         with (self._cd / "CMakeLists.txt").open("a") as file:
-            prefix = f'{self._vars["%upper_project_name%"]}_'
+            prefix = f'{self._vars["upper_project_name"]}_'
             file.write(
                 '\n'
                 f'option({prefix}BUILD_DOCS "Build documentation using Doxygen & Sphinx" OFF)\n'
@@ -177,15 +198,12 @@ class Initializer:
                 'endif ()\n')
         (self._cd / "docs/custom").mkdir(parents=True)
         self._copy_res("docs/custom/custom.css")
-        self._vars["%project_title%"] = prompt.input(
-            "Project title", sc.titlecase(self._name))
+        self._vars["project_title"] = prompt.input("Project title", sc.titlecase(self._name))
         author = prompt.input("Author of the library/documentation")
-        self._vars["%author%"] = author
+        self._vars["author"] = author
         doc_copyright_def = f"{datetime.datetime.now().year}, {author}"
-        self._vars["%doc_copyright%"] = prompt.input(
-            "Docs copyright", doc_copyright_def)
-        self._vars["%cpp_namespace%"] = prompt.input(
-            "C++ namespace of the project", sc.snakecase(self._name))
+        self._vars["doc_copyright"] = prompt.input("Docs copyright", doc_copyright_def)
+        self._vars["cpp_namespace"] = prompt.input("C++ namespace of the project", sc.snakecase(self._name))
         self._copy_res("docs/CMakeLists.txt", config_vars=True)
         self._copy_res("docs/conf.py", config_vars=True)
         self._copy_res("docs/Doxyfile.in", config_vars=True)
@@ -195,11 +213,11 @@ class Initializer:
     def _add_readme(self):
         if not prompt.confirm("Add a readme file?"):
             return
-        if "%project_title%" in self._vars:
-            title = self._vars["%project_title%"]
+        if "project_title" in self._vars:
+            title = self._vars["project_title"]
         else:
             title = prompt.input("Project title", sc.titlecase(self._name))
-            self._vars["%project_title%"] = title
+            self._vars["project_title"] = title
         (self._cd / "README.md").write_text(f"# {title}\n")
 
     def _git(self):

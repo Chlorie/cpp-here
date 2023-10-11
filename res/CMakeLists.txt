@@ -11,4 +11,23 @@ include("cmake/ProjectSettings.cmake")
 target_set_warnings(project_options INTERFACE)
 target_set_options(project_options INTERFACE)
 
+%if:is_lib%
+option(BUILD_SHARED_LIBS "Build library as shared library" OFF)
+
+add_subdirectory(lib)
+
+option(%upper_project_name%_BUILD_EXAMPLES "Build code examples" ON)
+if (%upper_project_name%_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
+%endif%
+%if:is_app%
 add_subdirectory(src)
+%endif%
+%if:test_enabled%
+option(%upper_project_name%_BUILD_TESTS "Build unit tests" OFF)
+if (%upper_project_name%_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif ()
+%endif%

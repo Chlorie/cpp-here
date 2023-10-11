@@ -16,9 +16,12 @@
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebug",
+                %if:test_enabled%
+                "%upper_project_name%_BUILD_TESTS": true,
+                "VCPKG_MANIFEST_FEATURES": "build-tests",
+                %endif%
                 "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-static",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static",
-                "VCPKG_MANIFEST_FEATURES": "build-examples"
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             },
             "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
         },
@@ -37,9 +40,12 @@
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
+                %if:test_enabled%
+                "%upper_project_name%_BUILD_TESTS": true,
+                "VCPKG_MANIFEST_FEATURES": "build-tests",
+                %endif%
                 "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-static",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static",
-                "VCPKG_MANIFEST_FEATURES": "build-examples"
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             },
             "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
         },
@@ -57,6 +63,10 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                %if:test_enabled%
+                "%upper_project_name%_BUILD_TESTS": true,
+                "VCPKG_MANIFEST_FEATURES": "build-tests",
+                %endif%
                 "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-dynamic"
             },
             "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
@@ -75,6 +85,10 @@
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                %if:test_enabled%
+                "%upper_project_name%_BUILD_TESTS": true,
+                "VCPKG_MANIFEST_FEATURES": "build-tests",
+                %endif%
                 "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-dynamic"
             },
             "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
