@@ -1,5 +1,6 @@
 option(ENABLE_IPO "Enable interprocedural optimization (link-time optimization)" ON)
 option(ENABLE_CXX_EXTENSIONS "Enable C++ language extensions" OFF)
+option(USE_STATIC_MSVC_RUNTIME "Use -MT(d) instead of -MD(d) for MSVC builds" OFF)
 
 if (ENABLE_IPO)
     include(CheckIPOSupported)
@@ -14,6 +15,10 @@ if (ENABLE_IPO)
 endif ()
 
 set(CMAKE_CXX_EXTENSIONS ${ENABLE_CXX_EXTENSIONS})
+
+if (USE_STATIC_MSVC_RUNTIME)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif ()
 
 function (target_set_warnings TGT ACCESS)
     option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
@@ -88,21 +93,25 @@ function (target_set_options TGT ACCESS)
 
     if (MSVC) # Visual Studio
         if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            target_compile_options(${TGT} ${ACCESS} # Conformance settings
-                /utf-8 /permissive- /Zc:__cplusplus /Zc:externConstexpr)
+            target_compile_options(${TGT} ${ACCESS}
+                /utf-8
+                /permissive- /Zc:__cplusplus /Zc:externConstexpr /Zc:preprocessor # Conformance settings
+            )
         endif ()
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(${TGT} ${ACCESS}
             -stdlib=libc++
             -fcolor-diagnostics
-            -ftemplate-backtrace-limit=32)
+            -ftemplate-backtrace-limit=32
+            -fvisibility=hidden)
         target_link_options(${TGT} ${ACCESS} -stdlib=libc++)
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${TGT}
             ${ACCESS}
             -fdiagnostics-color=always
             -fconcepts-diagnostics-depth=16
-            -ftemplate-backtrace-limit=32)
+            -ftemplate-backtrace-limit=32
+            -fvisibility=hidden)
     endif ()
 endfunction ()
 
@@ -110,16 +119,19 @@ function (target_set_output_dirs TGT)
     set_target_properties(${TGT} PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out")
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
+        VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${TGT}>"
+        VS_DEBUGGER_COMMAND "$<TARGET_FILE:${TGT}>"
+    )
 endfunction ()
 
 function (target_set_cxx_std TGT)
-    # Set C++20
-    if (MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.29.30129)
-        # We actually need /std:c++latest (C++23) for some of the C++20 features
-        # i.e. ranges and format, for MSVC 16.11 or later
-        target_compile_features(${TGT} PRIVATE cxx_std_23)
-    else ()
-        target_compile_features(${TGT} PRIVATE cxx_std_20)
-    endif ()
+    target_compile_features(${TGT} PRIVATE cxx_std_20)
+endfunction ()
+
+function (target_config TGT)
+    target_set_warnings(${TGT} PRIVATE)
+    target_set_options(${TGT} PRIVATE)
+	target_set_output_dirs(${TGT})
+	target_set_cxx_std(${TGT})
 endfunction ()

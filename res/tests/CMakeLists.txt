@@ -10,12 +10,10 @@ function (add_test_target FILE)
     add_executable(${TGT} "${FILE}.cpp")
     set_target_properties(${TGT} PROPERTIES FOLDER tests)
     target_link_libraries(${TGT} PRIVATE
-        project_options
         %project_name%
         Catch2::Catch2WithMain
     )
-    target_set_cxx_std(${TGT})
-    target_set_output_dirs(${TGT})
+    target_config(${TGT})
     catch_discover_tests(${TGT})
 endfunction ()
 

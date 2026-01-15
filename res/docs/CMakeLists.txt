@@ -20,7 +20,8 @@ add_custom_command(
     COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
     MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
     COMMENT "Generating docs"
-    VERBATIM)
+    VERBATIM
+)
 
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 
@@ -46,7 +47,8 @@ add_custom_command(
         "${CMAKE_CURRENT_SOURCE_DIR}/index.rst"
         ${DOXYGEN_INDEX_FILE}
     MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-    COMMENT "Generating documentation with Sphinx")
+    COMMENT "Generating documentation with Sphinx"
+)
 
 add_custom_target(Sphinx ALL DEPENDS ${SPHINX_INDEX_FILE})
 

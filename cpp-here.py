@@ -1,9 +1,10 @@
-from typing import Dict, Optional
+from typing import Optional
 import stringcase as sc
 from enum import IntEnum
 import os
 import subprocess as sp
 import datetime
+from argparse import ArgumentParser
 import shutil as sh
 from pathlib import Path
 import prompt
@@ -12,7 +13,12 @@ import json
 
 
 def main():
-    init = Initializer()
+    parser = ArgumentParser()
+    parser.add_argument("path", help="Destination folder of the project")
+    parser.add_argument("-a", "--allow-non-empty", action="store_true",
+                        help="Removes the check that the project folder must be empty")
+    ns = parser.parse_args()
+    init = Initializer(Path(ns.path), ns.allow_non_empty)
     init.run()
 
 
@@ -23,16 +29,18 @@ class ProjectType(IntEnum):
 
 
 class Initializer:
-    def __init__(self):
-        self._cd = Path(os.getcwd())
+    def __init__(self, path: Path, allow_non_empty: bool):
+        self._cd = path
         self._res_dir = Path(os.path.realpath(__file__)).parent / "res"
         self._name = sc.spinalcase(self._cd.stem)
         self._app_type = ProjectType.APP
         self._vars: ConfigVars = {}
         self._enable_tests: bool = False
+        self._allow_non_empty = allow_non_empty
 
     def run(self):
         self._check_cd()
+        os.chdir(self._cd)
         self._project_settings()
         self._universal_res()
         if self._project_type == ProjectType.APP:
@@ -74,7 +82,7 @@ class Initializer:
         tgt = self._cd / tgt_path
         res = self._res_dir / res_path
         if res.is_dir():
-            sh.copytree(res, tgt)
+            sh.copytree(res, tgt, dirs_exist_ok=True)
         elif config_vars:
             text = res.read_text()
             tgt.write_text(config_template(text, self._vars))
@@ -82,6 +90,10 @@ class Initializer:
             sh.copy(res, tgt)
 
     def _check_cd(self):
+        if self._allow_non_empty:
+            return
+        if not self._cd.exists():
+            self._error("The specified path does not exist")
         if next(self._cd.iterdir(), None) is not None:
             self._error("The current directory is not empty")
 
@@ -108,13 +120,13 @@ class Initializer:
         self._copy_res("CMakeLists.txt", config_vars=True)
 
     def _universal_res(self):
-        (self._cd / "cmake").mkdir()
+        (self._cd / "cmake").mkdir(exist_ok=True)
         self._copy_res(".editorconfig")
         self._copy_res(".gitignore")
         self._copy_res(".clang-format")
         self._copy_res("CMakePresets.json", config_vars=True)
-        self._copy_res("CMakeUserPresets_.json", "CMakeUserPresets.json", config_vars=True)
         self._copy_res("cmake/ProjectSettings.cmake")
+        self._copy_res("cmake/TargetSourceExtensions.cmake")
 
     def _setup_vcpkg(self):
         vcpkg = prompt.choices(
@@ -154,25 +166,25 @@ class Initializer:
             self._system("vcpkg", *vcpkg_args)
 
     def _initialize_app(self):
-        (self._cd / "src").mkdir()
+        (self._cd / "src").mkdir(exist_ok=True)
         self._copy_res("src/CMakeLists.txt", config_vars=True)
         self._copy_res("src/main.cpp")
         self._success("Created CMake project for the app")
 
     def _initialize_lib(self):
-        (self._cd / "examples").mkdir()
+        (self._cd / "examples").mkdir(exist_ok=True)
         self._copy_res("examples/CMakeLists.txt", config_vars=True)
         self._copy_res("examples/playground.cpp")
         self._success("Created CMake directory for examples")
         include_dir = prompt.input("Include directory name", sc.snakecase(self._name))
         self._vars["include_dir"] = include_dir
         include_dir = "lib/include/" + include_dir
-        (self._cd / include_dir).mkdir(parents=True)
+        (self._cd / include_dir).mkdir(parents=True, exist_ok=True)
         if self._project_type == ProjectType.LIBRARY:
             self._vars["macro_namespace"] = prompt.input("Preprocessor macro namespace", sc.constcase(self._name))
             self._copy_res("lib/include/dir/export.h",
                            include_dir + "/export.h", config_vars=True)
-            (self._cd / "lib/src").mkdir(parents=True)
+            (self._cd / "lib/src").mkdir(parents=True, exist_ok=True)
             self._copy_res("lib/src/dummy.cpp")
         self._copy_res("lib/CMakeLists.txt", config_vars=True)
         self._copy_res("cmake/libConfig.cmake.in",
@@ -180,7 +192,7 @@ class Initializer:
         self._success("Created CMake project for the library")
 
     def _initialize_tests(self):
-        (self._cd / "tests").mkdir()
+        (self._cd / "tests").mkdir(exist_ok=True)
         self._copy_res("tests/CMakeLists.txt", config_vars=True)
         self._copy_res("tests/example.cpp")
 
@@ -196,7 +208,7 @@ class Initializer:
                 f'if ({prefix}BUILD_DOCS)\n'
                 '    add_subdirectory(docs)\n'
                 'endif ()\n')
-        (self._cd / "docs/custom").mkdir(parents=True)
+        (self._cd / "docs/custom").mkdir(parents=True, exist_ok=True)
         self._copy_res("docs/custom/custom.css")
         self._vars["project_title"] = prompt.input("Project title", sc.titlecase(self._name))
         author = prompt.input("Author of the library/documentation")

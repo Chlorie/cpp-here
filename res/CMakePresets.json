@@ -1,97 +1,57 @@
 {
-    "version": 2,
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
     "configurePresets": [
         {
-            "name": "windows-x64-debug-static",
-            "displayName": "Windows x64 Debug (static)",
-            "description": "Windows x64 Debug config for Visual Studio, statically links dependencies.",
-            "generator": "Ninja",
+            "name": "default",
+            "displayName": "Default Config",
+            "description": "Default build with Ninja Multi-Config generator",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "True",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebug",
-                %if:test_enabled%
+%if:test_enabled%
                 "%upper_project_name%_BUILD_TESTS": true,
                 "VCPKG_MANIFEST_FEATURES": "build-tests",
-                %endif%
-                "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-static",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
-            },
-            "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
+%endif%
+                "BUILD_SHARED_LIBS": true
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "displayName": "Debug Build",
+            "description": "Unoptimized debug build",
+            "configurePreset": "default",
+            "configuration": "Debug"
         },
         {
-            "name": "windows-x64-release-static",
-            "displayName": "Windows x64 Release (static)",
-            "description": "Windows x64 Release config for Visual Studio, statically links dependencies.",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
-                %if:test_enabled%
-                "%upper_project_name%_BUILD_TESTS": true,
-                "VCPKG_MANIFEST_FEATURES": "build-tests",
-                %endif%
-                "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-static",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
-            },
-            "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
+            "name": "optimized",
+            "displayName": "Optimized Build",
+            "description": "Release build with debug symbols",
+            "configurePreset": "default",
+            "configuration": "RelWithDebInfo"
         },
         {
-            "name": "windows-x64-debug",
-            "displayName": "Windows x64 Debug",
-            "description": "Windows x64 Debug config for Visual Studio.",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                %if:test_enabled%
-                "%upper_project_name%_BUILD_TESTS": true,
-                "VCPKG_MANIFEST_FEATURES": "build-tests",
-                %endif%
-                "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-dynamic"
-            },
-            "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
-        },
+            "name": "release",
+            "displayName": "Release Build",
+            "description": "Release build with no debug support",
+            "configurePreset": "default",
+            "configuration": "Release"
+        }
+    ],
+    "testPresets": [
         {
-            "name": "windows-x64-release",
-            "displayName": "Windows x64 Release",
-            "description": "Windows x64 Release config for Visual Studio.",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                %if:test_enabled%
-                "%upper_project_name%_BUILD_TESTS": true,
-                "VCPKG_MANIFEST_FEATURES": "build-tests",
-                %endif%
-                "_VCPKG_INSTALLED_DIR": "${sourceDir}/out/vcpkg_installed/win64-dynamic"
-            },
-            "vendor": { "microsoft.com/VisualStudioSettings/CMake/1.0": { "hostOS": [ "Windows" ] } }
+            "name": "default",
+            "displayName": "Default Test",
+            "configurePreset": "default"
         }
     ]
 }

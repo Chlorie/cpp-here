@@ -1,5 +1,5 @@
 from typing import Optional, cast
-import InquirerPy as inq
+import questionary as qst
 
 
 def input(message: str, default: Optional[str] = None) -> str:
@@ -10,7 +10,7 @@ def input(message: str, default: Optional[str] = None) -> str:
     }
     if default is not None:
         prompt["default"] = default
-    return cast(str, inq.prompt([prompt])["name"])
+    return cast(str, qst.prompt(prompt)["name"])
 
 
 def choices(message: str, *choices: str) -> int:
@@ -23,11 +23,11 @@ def choices(message: str, *choices: str) -> int:
             for i, choice in enumerate(choices)
         ]
     }
-    return cast(int, inq.prompt([prompt])["name"])
+    return cast(int, qst.prompt([prompt])["name"])
 
 
 def confirm(message: str, default: bool = False) -> bool:
-    return cast(bool, inq.prompt([{
+    return cast(bool, qst.prompt([{
         "type": "confirm",
         "name": "name",
         "message": message,

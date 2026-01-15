@@ -1,2 +1,0 @@
-InquirerPy >= 0.3.0
-stringcase >= 1.0.0
