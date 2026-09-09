@@ -50,7 +50,7 @@ write_basic_package_version_file(
 include(GNUInstallDirs)
 set(%upper_project_name%_INSTALL_CMAKEDIR
     ${CMAKE_INSTALL_LIBDIR}/cmake/%project_name%
-    CACHE STRING "Path to %project_title% cmake files"
+    CACHE STRING "Path to %project_name% cmake files"
 )
 
 install(TARGETS %project_name%

@@ -1,22 +1,27 @@
-from typing import Optional
-import stringcase as sc
-from enum import IntEnum
-import os
-import subprocess as sp
 import datetime
-from argparse import ArgumentParser
-import shutil as sh
-from pathlib import Path
-import prompt
-from config_template import ConfigVars, config_template
 import json
+import os
+import shutil as sh
+import subprocess as sp
+from argparse import ArgumentParser
+from enum import IntEnum
+from pathlib import Path
+
+import stringcase as sc
+
+from cpp_here import prompt
+from cpp_here.config_template import ConfigVars, config_template
 
 
 def main():
     parser = ArgumentParser()
     parser.add_argument("path", help="Destination folder of the project")
-    parser.add_argument("-a", "--allow-non-empty", action="store_true",
-                        help="Removes the check that the project folder must be empty")
+    parser.add_argument(
+        "-a",
+        "--allow-non-empty",
+        action="store_true",
+        help="Removes the check that the project folder must be empty",
+    )
     ns = parser.parse_args()
     init = Initializer(Path(ns.path), ns.allow_non_empty)
     init.run()
@@ -62,7 +67,7 @@ class Initializer:
         print("✗ " + message)
         exit(1)
 
-    def _system(self, command: str, *args: str, hint: Optional[str] = None):
+    def _system(self, command: str, *args: str, hint: str | None = None):
         code = sp.call([command, *args], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
         if code == 0:
             return
@@ -71,12 +76,7 @@ class Initializer:
             message += f", {hint}"
         self._error(message)
 
-    def _copy_res(
-        self,
-        res_path: str,
-        tgt_path: Optional[str] = None,
-        config_vars: bool = False
-    ):
+    def _copy_res(self, res_path: str, tgt_path: str | None = None, config_vars: bool = False):
         if tgt_path is None:
             tgt_path = res_path
         tgt = self._cd / tgt_path
@@ -102,11 +102,14 @@ class Initializer:
         self._vars["project_name"] = self._name
         self._vars["upper_project_name"] = sc.constcase(self._name)
         self._vars["version"] = prompt.input("Package", "0.1.0")
-        self._project_type = ProjectType(prompt.choices(
-            "What type of project?",
-            "Application",
-            "Header-only library",
-            "Static/Shared library"))
+        self._project_type = ProjectType(
+            prompt.choices(
+                "What type of project?",
+                "Application",
+                "Header-only library",
+                "Static/Shared library",
+            )
+        )
         self._enable_tests = prompt.confirm("Enable testing with Catch2?")
         self._vars["test_enabled"] = self._enable_tests
         if self._project_type == ProjectType.APP:
@@ -130,34 +133,35 @@ class Initializer:
 
     def _setup_vcpkg(self):
         vcpkg = prompt.choices(
-            "Set up vcpkg settings?",
-            "Yes", "Yes, and also add vcpkg-configuration.json", "No")
+            "Set up vcpkg settings?", "Yes", "Yes, and also add vcpkg-configuration.json", "No"
+        )
 
         if vcpkg == 1:
-            (self._cd / "vcpkg-configuration.json").write_text(json.dumps({
-                "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
-                "registries": [],
-                "default-registry": {
-                    "kind": "git",
-                    "repository": "https://github.com/microsoft/vcpkg",
-                    "baseline": "9c7c66471005cb132832786d5d65d83d2cf503ad"
-                }
-            }, indent=4))
+            (self._cd / "vcpkg-configuration.json").write_text(
+                json.dumps(
+                    {
+                        "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
+                        "registries": [],
+                        "default-registry": {
+                            "kind": "git",
+                            "repository": "https://github.com/microsoft/vcpkg",
+                            "baseline": "9c7c66471005cb132832786d5d65d83d2cf503ad",
+                        },
+                    },
+                    indent=4,
+                )
+            )
         if vcpkg != 2:
-            vcpkg_name = prompt.input(
-                "vcpkg package name", sc.spinalcase(self._name))
+            vcpkg_name = prompt.input("vcpkg package name", sc.spinalcase(self._name))
             vcpkg_json = {
                 "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
                 "name": vcpkg_name,
                 "version-string": self._vars["version"],
-                "dependencies": []
+                "dependencies": [],
             }
             if self._enable_tests:
                 vcpkg_json["features"] = {
-                    "build-tests": {
-                        "description": "Build unit tests",
-                        "dependencies": ["catch2"]
-                    }
+                    "build-tests": {"description": "Build unit tests", "dependencies": ["catch2"]}
                 }
             (self._cd / "vcpkg.json").write_text(json.dumps(vcpkg_json, indent=4))
             vcpkg_args = ["x-update-baseline"]
@@ -181,14 +185,16 @@ class Initializer:
         include_dir = "lib/include/" + include_dir
         (self._cd / include_dir).mkdir(parents=True, exist_ok=True)
         if self._project_type == ProjectType.LIBRARY:
-            self._vars["macro_namespace"] = prompt.input("Preprocessor macro namespace", sc.constcase(self._name))
-            self._copy_res("lib/include/dir/export.h",
-                           include_dir + "/export.h", config_vars=True)
+            self._vars["macro_namespace"] = prompt.input(
+                "Preprocessor macro namespace", sc.constcase(self._name)
+            )
+            self._copy_res("lib/include/dir/export.h", include_dir + "/export.h", config_vars=True)
             (self._cd / "lib/src").mkdir(parents=True, exist_ok=True)
             self._copy_res("lib/src/dummy.cpp")
         self._copy_res("lib/CMakeLists.txt", config_vars=True)
-        self._copy_res("cmake/libConfig.cmake.in",
-                       f"cmake/{self._name}Config.cmake.in", config_vars=True)
+        self._copy_res(
+            "cmake/libConfig.cmake.in", f"cmake/{self._name}Config.cmake.in", config_vars=True
+        )
         self._success("Created CMake project for the library")
 
     def _initialize_tests(self):
@@ -201,13 +207,14 @@ class Initializer:
             return
         self._copy_res("cmake/FindSphinx.cmake")
         with (self._cd / "CMakeLists.txt").open("a") as file:
-            prefix = f'{self._vars["upper_project_name"]}_'
+            prefix = f"{self._vars['upper_project_name']}_"
             file.write(
-                '\n'
+                "\n"
                 f'option({prefix}BUILD_DOCS "Build documentation using Doxygen & Sphinx" OFF)\n'
-                f'if ({prefix}BUILD_DOCS)\n'
-                '    add_subdirectory(docs)\n'
-                'endif ()\n')
+                f"if ({prefix}BUILD_DOCS)\n"
+                "    add_subdirectory(docs)\n"
+                "endif ()\n"
+            )
         (self._cd / "docs/custom").mkdir(parents=True, exist_ok=True)
         self._copy_res("docs/custom/custom.css")
         self._vars["project_title"] = prompt.input("Project title", sc.titlecase(self._name))
@@ -215,7 +222,9 @@ class Initializer:
         self._vars["author"] = author
         doc_copyright_def = f"{datetime.datetime.now().year}, {author}"
         self._vars["doc_copyright"] = prompt.input("Docs copyright", doc_copyright_def)
-        self._vars["cpp_namespace"] = prompt.input("C++ namespace of the project", sc.snakecase(self._name))
+        self._vars["cpp_namespace"] = prompt.input(
+            "C++ namespace of the project", sc.snakecase(self._name)
+        )
         self._copy_res("docs/CMakeLists.txt", config_vars=True)
         self._copy_res("docs/conf.py", config_vars=True)
         self._copy_res("docs/Doxyfile.in", config_vars=True)
@@ -234,14 +243,11 @@ class Initializer:
 
     def _git(self):
         git_sel = prompt.choices(
-            "Set up git repo?",
-            "Initialize and make an initial commit",
-            "Just initialize",
-            "Skip")
+            "Set up git repo?", "Initialize and make an initial commit", "Just initialize", "Skip"
+        )
         if git_sel == 2:
             return
-        self._system("git", "init",
-                     hint="make sure you have git properly installed")
+        self._system("git", "init", hint="make sure you have git properly installed")
         if git_sel == 1:
             return
         self._system("git", "add", "-A")

@@ -1,10 +1,15 @@
 [project]
-name = "cpp-here"
+name = "cpp_here"
 version = "0.2.0"
 description = "An interactive command line tool for creating new CMake-based C++ projects quickly and effortlessly."
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "questionary>=2.1.0",
-    "stringcase>=1.2.0",
-]
+requires-python = ">=3.12"
+dependencies = ["questionary>=2.1.0", "stringcase>=1.2.0"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+lint.extend-select = ["I", "UP"]
+
+[tool.pyright]
+typeCheckingMode = "standard"

@@ -1,8 +1,6 @@
-from typing import Union, Dict
 import re
 
-
-ConfigVars = Dict[str, Union[str, bool]]
+ConfigVars = dict[str, str | bool]
 
 
 _cond_pattern = re.compile(r"%if:(\w*)%\r?\n?([^%]*)%endif%\r?\n?")
@@ -13,10 +11,10 @@ def config_template(template: str, config_vars: ConfigVars) -> str:
     def replace_conditional(match: re.Match[str]) -> str:
         var = match.group(1).strip()
         content = match.group(2)
-        if var in config_vars and config_vars[var] == True:
+        if var in config_vars and config_vars[var]:
             return content
         return ""
-    
+
     def replace_var(match: re.Match[str]) -> str:
         full_var = match.group(1)
         var = full_var.strip()
@@ -24,7 +22,7 @@ def config_template(template: str, config_vars: ConfigVars) -> str:
             return value
         else:
             return ""
-    
+
     curr = template
     while True:
         prev = curr
