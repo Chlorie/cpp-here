@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.28)
+{% set upper_name = project_name | replace('-', '_') | upper %}
+project({{ project_name }} LANGUAGES CXX VERSION {{ version }})
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+include(ProjectSettings)
+include(TargetSourceExtensions)
+{% if project_type != 'app' %}
+add_subdirectory(lib)
+
+option({{ upper_name }}_BUILD_EXAMPLES "Build code examples" ON)
+if ({{ upper_name }}_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
+{% else %}
+add_subdirectory(src)
+{% endif %}
+{%- if enable_tests %}
+include(CTest)
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()
+{% endif %}
+{%- if project_type != 'app' and enable_docs %}
+option({{ upper_name }}_BUILD_DOCS "Build documentation using Doxygen & Sphinx" OFF)
+if ({{ upper_name }}_BUILD_DOCS)
+    add_subdirectory(docs)
+endif ()
+{% endif %}

@@ -1,0 +1,7 @@
+{% set project_title = project_name | replace('-', ' ') | replace('_', ' ') | title -%}
+Welcome to {{ project_title }} Reference!
+{{ '=' * (project_title | length + 22) }}
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Contents

@@ -1,14 +1,31 @@
 # cpp-here
 
-An interactive command line tool for creating new CMake-based C++ projects quickly and effortlessly.
+A [Copier](https://copier.readthedocs.io/) template for creating new CMake-based C++ projects quickly and effortlessly.
 This is only meant for personal use, but feel free to take it if you need it.
 
-This repo is a Python script version of the now deprecated [cpp-init](https://github.com/Chlorie/cpp-init).
+This repo is the Copier-based successor of the now deprecated [cpp-init](https://github.com/Chlorie/cpp-init).
 
-This tool is able to:
-- Create blank project templates for executables, header-only or compiled libraries.
-- Set up vcpkg manifest/registry settings.
-- Set up project settings like warnings for the three main C++ compilers.
-- Set up CMakePresets.json automatically.
-- Generate dll-related macros for libraries.
-- Create blank templates for Breathe (Doxygen & Sphinx)-based documentation.
+## Usage
+
+```sh
+copier copy --trust gh:Chlorie/cpp-here path/to/project
+```
+
+`--trust` is required because the template runs post-copy tasks (`git init`, `vcpkg x-update-baseline`).
+
+To pull in later template improvements in a project that was already generated:
+
+```sh
+cd path/to/project
+copier update --trust
+```
+
+## Features
+
+- Project templates for executables, header-only libraries and compiled libraries.
+- Optional vcpkg manifest mode setup.
+- Project settings with warning presets for the three main C++ compilers.
+- CMakePresets.json with Ninja Multi-Config out of the box.
+- DLL import/export macros for shared libraries.
+- Optional Catch2 unit tests (via vcpkg or FetchContent).
+- Optional Breathe (Doxygen & Sphinx)-based documentation scaffold.

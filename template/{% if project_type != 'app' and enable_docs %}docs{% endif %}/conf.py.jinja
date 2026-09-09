@@ -1,0 +1,66 @@
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+{% set project_title = project_name | replace('-', ' ') | replace('_', ' ') | title -%}
+
+# -- Project information -----------------------------------------------------
+
+project = '{{ project_title }}'
+copyright = '{{ doc_copyright }}'
+author = '{{ author }}'
+
+
+# -- C++ information ---------------------------------------------------------
+
+primary_domain = 'cpp'
+default_role = 'cpp:any'
+highlight_language = 'cpp'
+cpp_index_common_prefix = ['{{ cpp_namespace }}::']
+
+
+# -- General configuration ---------------------------------------------------
+
+extensions = ['breathe']
+
+breathe_default_project = '{{ project_name }}'
+breathe_default_members = ()
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ['_templates']
+
+language = 'zh_CN'
+html_search_language = 'zh'
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+
+# -- Options for HTML output -------------------------------------------------
+
+html_theme = 'sphinx_rtd_theme'
+
+# Custom static files, relative to this directory. They are copied after the
+# builtin static files, so a file named "default.css" will overwrite the
+# builtin "default.css".
+html_static_path = ['custom']
+html_css_files = ['custom.css']
+
+
+# -- Read the Docs support ---------------------------------------------------
+
+import os
+import subprocess
+
+def config_doxyfile():
+    with open('Doxyfile.in', 'r') as f:
+        s = f.read()
+    s = s.replace('@PROJECT_SOURCE_DIR@', '..')
+    with open('Doxyfile', 'w') as f:
+        f.write(s)
+
+if os.environ.get('READTHEDOCS', None) == 'True':  # On RtD
+    config_doxyfile()
+    subprocess.run(['doxygen'], check=True)
+    breathe_projects = {'{{ project_name }}': './xml'}

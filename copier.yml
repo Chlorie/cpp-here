@@ -1,0 +1,98 @@
+_min_copier_version: "9.0"
+_subdirectory: template
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+project_name:
+    type: str
+    help: Project name in spinal-case (e.g. "my-project"); also the CMake target name
+    default: "{{ _copier_conf.dst_path.name }}"
+
+version:
+    type: str
+    help: Initial project version
+    default: 0.1.0
+
+project_type:
+    type: str
+    help: What type of project?
+    choices:
+        Application: app
+        Header-only library: headers
+        Static/Shared library: library
+
+enable_tests:
+    type: bool
+    help: Enable testing with Catch2?
+    default: false
+
+vcpkg:
+    type: bool
+    help: Set up vcpkg manifest mode (vcpkg.json + toolchain preset)?
+    default: true
+
+include_dir:
+    type: str
+    help: Include directory name under lib/include
+    default: "{{ project_name | replace('-', '_') }}"
+    when: "{{ project_type != 'app' }}"
+
+macro_namespace:
+    type: str
+    help: Preprocessor macro namespace for DLL import/export macros
+    default: "{{ project_name | replace('-', '_') | upper }}"
+    when: "{{ project_type == 'library' }}"
+
+enable_docs:
+    type: bool
+    help: Add Doxygen & Sphinx based docs support?
+    default: false
+    when: "{{ project_type != 'app' }}"
+
+author:
+    type: str
+    help: Author of the library/documentation
+    when: "{{ project_type != 'app' and enable_docs }}"
+
+doc_copyright:
+    type: str
+    help: Docs copyright line (e.g. "2026, Your Name")
+    default: "{{ author }}"
+    when: "{{ project_type != 'app' and enable_docs }}"
+
+cpp_namespace:
+    type: str
+    help: C++ namespace of the project
+    default: "{{ project_name | replace('-', '_') }}"
+    when: "{{ project_type != 'app' and enable_docs }}"
+
+add_readme:
+    type: bool
+    help: Add a readme file?
+    default: true
+
+git:
+    type: str
+    help: Set up git repo?
+    choices:
+        Initialize and make an initial commit: commit
+        Just initialize: init
+        Skip: skip
+    default: commit
+
+_tasks:
+    - command: git init
+      when: "{{ _copier_operation == 'copy' and git != 'skip' }}"
+    - command: git add -A && git commit -m "Initialized project"
+      when: "{{ _copier_operation == 'copy' and git == 'commit' }}"
+    - command: vcpkg x-update-baseline --add-initial-baseline
+      when: "{{ _copier_operation == 'copy' and vcpkg }}"
+
+_message_after_copy: |
+    Done. Configure and build with:
+      cmake --preset default
+      cmake --build --preset debug
+    {%- if enable_tests %}
+    Run tests with:
+      ctest --preset default
+    {%- endif %}

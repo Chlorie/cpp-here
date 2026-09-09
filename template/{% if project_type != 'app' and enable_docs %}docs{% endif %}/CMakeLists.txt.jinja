@@ -3,7 +3,7 @@
 find_package(Doxygen REQUIRED)
 find_package(Sphinx REQUIRED)
 
-file(GLOB_RECURSE PUBLIC_HEADERS "../lib/include/*/*.h")
+file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS "../lib/include/*/*.h")
 
 set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(DOXYGEN_INDEX_FILE ${DOXYGEN_OUTPUT_DIR}/xml/index.xml)
@@ -13,7 +13,6 @@ set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 
 # Only re-generate Doxygen when Doxyfile or public headers change
-file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR})
 add_custom_command(
     OUTPUT ${DOXYGEN_INDEX_FILE}
     DEPENDS ${PUBLIC_HEADERS}
@@ -25,10 +24,10 @@ add_custom_command(
 
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 
-file(GLOB_RECURSE RST_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*/*.rst")
+file(GLOB_RECURSE RST_DOC_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*/*.rst")
 
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
-set(SPHINX_BUILD ${PROJECT_SOURCE_DIR}/docs/output)
+set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/html)
 set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
 
 # Only re-generate Sphinx when:
@@ -40,7 +39,7 @@ add_custom_command(
     COMMAND
         ${SPHINX_EXECUTABLE} -b html
         # Tell Breathe where to find the Doxygen output
-        -Dbreathe_projects.%project_name%=${DOXYGEN_OUTPUT_DIR}/xml
+        -Dbreathe_projects.{{ project_name }}=${DOXYGEN_OUTPUT_DIR}/xml
     ${SPHINX_SOURCE} ${SPHINX_BUILD}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS

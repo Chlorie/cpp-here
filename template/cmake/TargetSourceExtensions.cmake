@@ -1,6 +1,6 @@
 function (_prepend_paths PATHS PARENT)
     string(REGEX REPLACE "/$" "" PARENT "${PARENT}")
-	list(TRANSFORM ${PATHS} PREPEND "${PARENT}/")
+    list(TRANSFORM ${PATHS} PREPEND "${PARENT}/")
     return(PROPAGATE ${PATHS})
 endfunction ()
 

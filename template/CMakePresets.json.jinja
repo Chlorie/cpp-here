@@ -2,7 +2,7 @@
     "version": 6,
     "cmakeMinimumRequired": {
         "major": 3,
-        "minor": 21,
+        "minor": 28,
         "patch": 0
     },
     "configurePresets": [
@@ -13,14 +13,20 @@
             "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "True",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+{%- if vcpkg %}
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-%if:test_enabled%
-                "%upper_project_name%_BUILD_TESTS": true,
+{%- endif %}
+{%- if enable_tests %}
+                "BUILD_TESTING": true,
+{%- if vcpkg %}
                 "VCPKG_MANIFEST_FEATURES": "build-tests",
-%endif%
-                "BUILD_SHARED_LIBS": true
+{%- endif %}
+{%- endif %}
+{%- if project_type == 'library' %}
+                "BUILD_SHARED_LIBS": true,
+{%- endif %}
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
             }
         }
     ],
